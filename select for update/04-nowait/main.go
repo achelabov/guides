@@ -1,4 +1,3 @@
-// NOWAIT и lock_timeout: fail-fast вместо бесконечного ожидания блокировки.
 package main
 
 import (
@@ -16,10 +15,8 @@ import (
 
 const defaultDatabaseURL = "postgres://postgres:postgres@localhost:55432/sfu?sslmode=disable"
 
-// errInvoiceBusy: NOWAIT не стал ждать блокировку строки.
 var errInvoiceBusy = errors.New("счёт занят, попробуйте позже")
 
-// errLockTimeout: ожидание блокировки превысило lock_timeout.
 var errLockTimeout = errors.New("lock_timeout: PostgreSQL сам прервал ожидание")
 
 func connect(ctx context.Context) *pgxpool.Pool {
@@ -39,7 +36,7 @@ func isLockUnavailable(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "55P03"
 }
 
-// holdInvoice надолго блокирует счёт-фактуру, имитируя зависшую транзакцию.
+// надолго блокирует счёт, имитируя зависшую транзакцию.
 // Транзакцию возвращаем наружу: блокировка нужна держаться дольше функции.
 func holdInvoice(ctx context.Context, pool *pgxpool.Pool) (pgx.Tx, error) {
 	tx, err := pool.Begin(ctx)
@@ -54,7 +51,7 @@ func holdInvoice(ctx context.Context, pool *pgxpool.Pool) (pgx.Tx, error) {
 	return tx, nil
 }
 
-// getInvoiceNowait не ждёт: если строку нельзя заблокировать сразу, будет ошибка.
+// не ждёт: если строку нельзя заблокировать сразу, будет ошибка.
 func getInvoiceNowait(ctx context.Context, pool *pgxpool.Pool, id int) (string, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -73,7 +70,7 @@ func getInvoiceNowait(ctx context.Context, pool *pgxpool.Pool, id int) (string, 
 	return status, tx.Commit(ctx)
 }
 
-// getInvoiceWithTimeout ждёт блокировку, но не дольше lock_timeout.
+// ждёт блокировку, но не дольше lock_timeout.
 func getInvoiceWithTimeout(ctx context.Context, pool *pgxpool.Pool, id int) (string, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -115,7 +112,7 @@ func run(ctx context.Context, pool *pgxpool.Pool) error {
 
 	_, err = getInvoiceNowait(ctx, pool, 1)
 	if errors.Is(err, errInvoiceBusy) {
-		fmt.Println(err) // счёт-фактура занята, попробуйте позже
+		fmt.Println(err) // счёт занят, попробуйте позже
 	} else if err != nil {
 		return err
 	}

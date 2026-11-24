@@ -1,4 +1,3 @@
-// Долгая транзакция с блокировкой: внешний HTTP-вызов удерживает строку, конкуренты ждут.
 package main
 
 import (
@@ -43,7 +42,7 @@ type waitResult struct {
 	err error
 }
 
-// waiter имитирует конкурентное списание и измеряет, сколько оно ждало блокировку.
+// имитирует конкурентное списание и измеряет, сколько оно ждало блокировку.
 func waiter(ctx context.Context, pool *pgxpool.Pool) chan waitResult {
 	waited := make(chan waitResult, 1)
 	go func() {
@@ -55,7 +54,7 @@ func waiter(ctx context.Context, pool *pgxpool.Pool) chan waitResult {
 	return waited
 }
 
-// holdLockDuringHTTP анти-паттерн: блокировка взята до сетевого похода
+// анти-паттерн: блокировка взята до сетевого похода
 // и держится всё время ожидания ответа.
 func holdLockDuringHTTP(ctx context.Context, pool *pgxpool.Pool, gateway string) error {
 	tx, err := pool.Begin(ctx)
@@ -83,7 +82,7 @@ func holdLockDuringHTTP(ctx context.Context, pool *pgxpool.Pool, gateway string)
 	return nil
 }
 
-// httpBeforeTx правильный порядок: сначала внешний мир, потом короткая транзакция.
+// правильный порядок: сначала внешний мир, потом короткая транзакция.
 func httpBeforeTx(ctx context.Context, pool *pgxpool.Pool, gateway string) error {
 	if _, err := http.Get(gateway); err != nil {
 		return err

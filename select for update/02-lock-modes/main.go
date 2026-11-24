@@ -1,4 +1,3 @@
-// FOR UPDATE против FOR NO KEY UPDATE: влияние на вставку дочерней записи по внешнему ключу.
 package main
 
 import (
@@ -39,7 +38,7 @@ func reset(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
-// createOrderWhileUserLocked блокирует пользователя в заданном режиме
+// блокирует пользователя в заданном режиме
 // и вставляет заказ, если родительская строка позволяет.
 func createOrderWhileUserLocked(ctx context.Context, pool *pgxpool.Pool, mode string) (time.Duration, error) {
 	// Транзакция держит своё соединение из пула до Commit,
