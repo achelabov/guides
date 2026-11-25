@@ -72,7 +72,7 @@ func transfer(ctx context.Context, pool *pgxpool.Pool, fromID, toID int, ordered
 	return tx.Commit(ctx)
 }
 
-// перезапускает транзакцию после deadlock (40P01) и lock_timeout (55P03).
+// перезапускает транзакцию после deadlock (40P01)
 func withRetry(fn func() error) error {
 	for attempt := 1; ; attempt++ {
 		err := fn()
@@ -80,8 +80,7 @@ func withRetry(fn func() error) error {
 			return nil
 		}
 		var pgErr *pgconn.PgError
-		if !errors.As(err, &pgErr) ||
-			(pgErr.Code != "40P01" && pgErr.Code != "55P03") || attempt >= 3 {
+		if !errors.As(err, &pgErr) || pgErr.Code != "40P01" || attempt >= 3 {
 			return err
 		}
 		fmt.Printf("%s, повтор %d\n", pgErr.Code, attempt)

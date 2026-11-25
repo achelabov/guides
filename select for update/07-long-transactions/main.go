@@ -54,9 +54,8 @@ func waiter(ctx context.Context, pool *pgxpool.Pool) chan waitResult {
 	return waited
 }
 
-// анти-паттерн: блокировка взята до сетевого похода
-// и держится всё время ожидания ответа.
-func holdLockDuringHTTP(ctx context.Context, pool *pgxpool.Pool, gateway string) error {
+// Плохо: строка заблокирована всё время запроса к внешнему сервису
+func chargeWithAntifraudBad(ctx context.Context, pool *pgxpool.Pool, gateway string) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -82,8 +81,8 @@ func holdLockDuringHTTP(ctx context.Context, pool *pgxpool.Pool, gateway string)
 	return nil
 }
 
-// правильный порядок: сначала внешний мир, потом короткая транзакция.
-func httpBeforeTx(ctx context.Context, pool *pgxpool.Pool, gateway string) error {
+// Хорошо: сначала внешний мир, потом короткая транзакция
+func chargeWithAntifraudGood(ctx context.Context, pool *pgxpool.Pool, gateway string) error {
 	if _, err := http.Get(gateway); err != nil {
 		return err
 	}
@@ -122,10 +121,10 @@ func run(ctx context.Context, pool *pgxpool.Pool) error {
 	}))
 	defer srv.Close()
 
-	if err := holdLockDuringHTTP(ctx, pool, srv.URL); err != nil {
+	if err := chargeWithAntifraudBad(ctx, pool, srv.URL); err != nil {
 		return err
 	}
-	return httpBeforeTx(ctx, pool, srv.URL)
+	return chargeWithAntifraudGood(ctx, pool, srv.URL)
 }
 
 func main() {

@@ -43,14 +43,14 @@ func reset(ctx context.Context, pool *pgxpool.Pool) error {
 func createOrderWhileUserLocked(ctx context.Context, pool *pgxpool.Pool, mode string) (time.Duration, error) {
 	// Транзакция держит своё соединение из пула до Commit,
 	// конкурентная вставка ниже возьмёт другой.
-	tx1, err := pool.Begin(ctx)
+	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return 0, err
 	}
-	defer tx1.Rollback(ctx)
+	defer tx.Rollback(ctx)
 
 	var id int
-	if err := tx1.QueryRow(ctx, "SELECT id FROM users WHERE id = 1 FOR "+mode).Scan(&id); err != nil {
+	if err := tx.QueryRow(ctx, "SELECT id FROM users WHERE id = 1 FOR "+mode).Scan(&id); err != nil {
 		return 0, err
 	}
 
@@ -64,7 +64,7 @@ func createOrderWhileUserLocked(ctx context.Context, pool *pgxpool.Pool, mode st
 	if err != nil {
 		return 0, err
 	}
-	if err := tx1.Commit(ctx); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return 0, err
 	}
 	return time.Since(start), nil
